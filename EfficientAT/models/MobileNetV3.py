@@ -1,4 +1,6 @@
 from functools import partial
+import os
+from pathlib import Path
 from typing import Any, Callable, List, Optional, Sequence, Tuple, Union
 from torch import nn, Tensor
 import torch.nn.functional as F
@@ -18,7 +20,7 @@ from EfficientAT.helpers.utils import NAME_TO_WIDTH
 # points to github releases
 model_url = "https://github.com/fschmid56/EfficientAT/releases/download/v0.0.1/"
 # folder to store downloaded models to
-model_dir = "resources"
+model_dir = Path(os.getenv("PRETRAINED_WEIGHTS_DIR", ".")).expanduser()/"efficient_at"
 
 
 pretrained_models = {
