@@ -1,3 +1,6 @@
+import importlib.resources as pkg_resources
+from EfficientAT import metadata
+
 def NAME_TO_WIDTH(name):
     map = {
         'mn01': 0.1,
@@ -25,7 +28,7 @@ def NAME_TO_WIDTH(name):
 import csv
 
 # Load label
-with open('metadata/class_labels_indices.csv', 'r') as f:
+with pkg_resources.open_text(metadata, 'class_labels_indices.csv') as f:
     reader = csv.reader(f, delimiter=',')
     lines = list(reader)
 

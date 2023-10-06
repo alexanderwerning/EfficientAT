@@ -13,11 +13,11 @@ import torch.nn.functional as F
 from torch.hub import download_url_to_file
 import pickle
 
-from datasets.audioset import get_test_set, get_full_training_set, get_ft_weighted_sampler
-from models.MobileNetV3 import get_model as get_mobilenet, get_ensemble_model
-from models.preprocess import AugmentMelSTFT
-from helpers.init import worker_init_fn
-from helpers.utils import NAME_TO_WIDTH, exp_warmup_linear_down, mixup
+from EfficientAT.datasets.audioset import get_test_set, get_full_training_set, get_ft_weighted_sampler
+from EfficientAT.models.MobileNetV3 import get_model as get_mobilenet, get_ensemble_model
+from EfficientAT.models.preprocess import AugmentMelSTFT
+from EfficientAT.helpers.init import worker_init_fn
+from EfficientAT.helpers.utils import NAME_TO_WIDTH, exp_warmup_linear_down, mixup
 
 preds_url = \
     "https://github.com/fschmid56/EfficientAT/releases/download/v0.0.1/passt_enemble_logits_mAP_495.npy"
@@ -272,8 +272,9 @@ def evaluate(args):
     print(f"Running AudioSet evaluation for model '{model_name}' on device '{device}'")
     targets = []
     outputs = []
+    # names = []
     for batch in tqdm(dl):
-        x, _, y = batch
+        x, audio_name, y = batch
         x = x.to(device)
         y = y.to(device)
         # our models are trained in half precision mode (torch.float16)
@@ -285,9 +286,16 @@ def evaluate(args):
                 y_hat, _ = model(x)
         targets.append(y.cpu().numpy())
         outputs.append(y_hat.float().cpu().numpy())
-
+        # names.extend(audio_name)
+    # import pickle as pkl
+    # with open("names.pkl", 'wb') as f:
+    #     pkl.dump(names, f)
     targets = np.concatenate(targets)
     outputs = np.concatenate(outputs)
+    # with open("targets.pkl", 'wb') as f:
+    #     pkl.dump(targets, f)
+    # with open("outputs.pkl", 'wb') as f:
+    #     pkl.dump(outputs, f)
     mAP = metrics.average_precision_score(targets, outputs, average=None)
     ROC = metrics.roc_auc_score(targets, outputs, average=None)
 

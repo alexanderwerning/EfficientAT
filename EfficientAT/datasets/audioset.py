@@ -6,7 +6,7 @@ import numpy as np
 import h5py
 import os
 
-from datasets.helpers.audiodatasets import PreprocessDataset, get_roll_func
+from EfficientAT.datasets.helpers.audiodatasets import PreprocessDataset, get_roll_func
 
 # specify AudioSet location in 'dataset_dir'
 # 3 files have to be located there:
@@ -16,7 +16,7 @@ from datasets.helpers.audiodatasets import PreprocessDataset, get_roll_func
 # follow the instructions here to get these 3 files:
 # https://github.com/kkoutini/PaSST/tree/main/audioset
 
-dataset_dir = None
+dataset_dir = "/net/vol/werning/db/audioset_hdf5"
 assert dataset_dir is not None, "Specify AudioSet location in variable 'dataset_dir'. " \
                                 "Check out the Readme file for further instructions. " \
                                 "https://github.com/fschmid56/EfficientAT/blob/main/README.md"
@@ -150,7 +150,7 @@ class AudioSetDataset(TorchDataset):
 
         audio_name = self.dataset_file['audio_name'][index].decode()
         # convert our modified filenames to official file names
-        audio_name = audio_name.replace(".mp3", "").split("Y", 1)[1]
+        audio_name = audio_name.replace(".mp3", "")  # .split("Y", 1)[1]  # we dont do that here
         waveform = decode_mp3(self.dataset_file['mp3'][index])
         waveform = pydub_augment(waveform, self.gain_augment)
         waveform = pad_or_truncate(waveform, self.clip_length)

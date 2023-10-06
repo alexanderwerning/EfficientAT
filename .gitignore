@@ -1,4 +1,8 @@
 __pycache__
-resources/*.pt
-resources/*.npy
+*/resources/*.pt
+*/resources/*.npy
 .idea
+*/	
+*/wandb/run*/*
+*.log
+.ipy*

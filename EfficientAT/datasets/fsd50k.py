@@ -6,7 +6,7 @@ import torch
 import numpy as np
 import h5py
 
-from datasets.helpers.audiodatasets import PreprocessDataset, get_roll_func
+from EfficientAT.datasets.helpers.audiodatasets import PreprocessDataset, get_roll_func
 
 # specify FSD50K location in 'dataset_dir'
 # 3 files have to be located there:

@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 import librosa
 
-from datasets.helpers.audiodatasets import PreprocessDataset, get_roll_func
+from EfficientAT.datasets.helpers.audiodatasets import PreprocessDataset, get_roll_func
 
 # specify ESC50 location in 'dataset_dir'
 # 3 files have to be located there:
@@ -15,7 +15,7 @@ from datasets.helpers.audiodatasets import PreprocessDataset, get_roll_func
 # follow the instructions here to get these 3 files:
 # https://github.com/kkoutini/PaSST/tree/main/esc50
 
-dataset_dir = None
+dataset_dir = "/net/vol/werning/db/ESC50_32khz"
 
 assert dataset_dir is not None, "Specify ESC50 dataset location in variable 'dataset_dir'. " \
                                 "Check out the Readme file for further instructions. " \

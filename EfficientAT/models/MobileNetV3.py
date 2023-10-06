@@ -6,10 +6,10 @@ from torchvision.ops.misc import ConvNormActivation
 from torch.hub import load_state_dict_from_url
 import urllib.parse
 
-from models.utils import cnn_out_size
-from models.block_types import InvertedResidualConfig, InvertedResidual
-from models.attention_pooling import MultiHeadAttentionPooling
-from helpers.utils import NAME_TO_WIDTH
+from EfficientAT.models.utils import cnn_out_size
+from EfficientAT.models.block_types import InvertedResidualConfig, InvertedResidual
+from EfficientAT.models.attention_pooling import MultiHeadAttentionPooling
+from EfficientAT.helpers.utils import NAME_TO_WIDTH
 
 
 # Adapted version of MobileNetV3 pytorch implementation
@@ -82,6 +82,8 @@ class MobileNetV3(nn.Module):
         in_conv_kernel: int = 3,
         in_conv_stride: int = 2,
         in_channels: int = 1,
+        act_feats: bool = True,
+        fixed_output_channels: Optional[int] = None,
         **kwargs: Any,
     ) -> None:
         """
@@ -97,9 +99,10 @@ class MobileNetV3(nn.Module):
             in_conv_kernel (int): Size of kernel for first convolution
             in_conv_stride (int): Size of stride for first convolution
             in_channels (int): Number of input channels
+            fixed_output_channels (Optional[int]): If not None, sets the number of output channels before the head
         """
         super(MobileNetV3, self).__init__()
-
+        self.act_feats = act_feats
         if not inverted_residual_setting:
             raise ValueError("The inverted_residual_setting should not be empty")
         elif not (
@@ -156,22 +159,26 @@ class MobileNetV3(nn.Module):
         # building last several layers
         lastconv_input_channels = inverted_residual_setting[-1].out_channels
         lastconv_output_channels = 6 * lastconv_input_channels
+        if fixed_output_channels:
+            lastconv_output_channels = fixed_output_channels
         layers.append(
             ConvNormActivation(
                 lastconv_input_channels,
                 lastconv_output_channels,
                 kernel_size=1,
                 norm_layer=norm_layer,
-                activation_layer=nn.Hardswish,
+                activation_layer=nn.Hardswish if act_feats else None,
             )
         )
 
         self.features = nn.Sequential(*layers)
         self.head_type = kwargs.get("head_type", False)
         if self.head_type == "multihead_attention_pooling":
+            warnings.warn("no activation function applied for act_feats=False")
             self.classifier = MultiHeadAttentionPooling(lastconv_output_channels, num_classes,
                                                         num_heads=kwargs.get("multihead_attention_heads"))
         elif self.head_type == "fully_convolutional":
+            warnings.warn("no activation function applied for act_feats=False")
             self.classifier = nn.Sequential(
                 nn.Conv2d(
                     lastconv_output_channels,
@@ -218,6 +225,8 @@ class MobileNetV3(nn.Module):
                 fmaps.append(x)
         
         features = F.adaptive_avg_pool2d(x, (1, 1)).squeeze()
+        if not self.act_feats:
+            x = nn.Hardswish()(x)
         x = self.classifier(x).squeeze()
         
         if features.dim() == 1 and x.dim() == 1:
@@ -302,6 +311,18 @@ def _mobilenet_v3(
                 del state_dict['classifier.5.bias']
             else:
                 state_dict = {k: v for k, v in state_dict.items() if not k.startswith('classifier')}
+        if ('fixed_output_channels' in kwargs and kwargs['fixed_output_channels'] is not None
+            and kwargs['fixed_output_channels'] !=  6 * inverted_residual_setting[-1].out_channels):
+            weights = ['features.16.0.weight',
+                       'features.16.1.weight',
+                       'features.16.1.bias',
+                       'features.16.1.running_mean',
+                       'features.16.1.running_var',
+                       'features.16.1.num_batches_tracked',
+                       'classifier.2.weight',
+                       'classifier.2.bias']
+            for w in weights:
+                state_dict.pop(w)
         try:
             model.load_state_dict(state_dict)
         except RuntimeError as e:
@@ -326,7 +347,8 @@ def mobilenet_v3(pretrained_name: str = None, **kwargs: Any) \
 def get_model(num_classes: int = 527, pretrained_name: str = None, width_mult: float = 1.0,
               reduced_tail: bool = False, dilated: bool = False, strides: Tuple[int, int, int, int] = (2, 2, 2, 2),
               head_type: str = "mlp", multihead_attention_heads: int = 4, input_dim_f: int = 128,
-              input_dim_t: int = 1000, se_dims: str = 'c', se_agg: str = "max", se_r: int = 4):
+              input_dim_t: int = 1000, se_dims: str = 'c', se_agg: str = "max", se_r: int = 4,
+              act_feats: bool = True, fixed_output_channels: Optional[int] = None):
     """
         Arguments to modify the instantiation of a MobileNetv3
 
@@ -361,9 +383,9 @@ def get_model(num_classes: int = 527, pretrained_name: str = None, width_mult: f
     m = mobilenet_v3(pretrained_name=pretrained_name, num_classes=num_classes,
                      width_mult=width_mult, reduced_tail=reduced_tail, dilated=dilated, strides=strides,
                      head_type=head_type, multihead_attention_heads=multihead_attention_heads,
-                     input_dims=input_dims, se_conf=se_conf
+                     input_dims=input_dims, se_conf=se_conf, act_feats=act_feats, fixed_output_channels=fixed_output_channels
                      )
-    print(m)
+    # print(m)
     return m
 
 
