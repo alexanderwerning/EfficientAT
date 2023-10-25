@@ -331,6 +331,9 @@ def _mobilenet_v3(
             print(str(e))
             print("Loading weights pre-trained weights in a non-strict manner.")
             model.load_state_dict(state_dict, strict=False)
+    elif Path(pretrained_name).exists():
+        state_dict = model.load_state_dict(state_dict, strict=False)
+        model.load_state_dict(state_dict=state_dict)
     elif pretrained_name:
         raise NotImplementedError(f"Model name '{pretrained_name}' unknown.")
     return model
