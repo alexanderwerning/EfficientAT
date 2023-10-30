@@ -7,7 +7,7 @@ import h5py
 import os
 
 from EfficientAT.datasets.helpers.audiodatasets import PreprocessDataset, get_roll_func
-
+from nt_paths import db_root
 # specify AudioSet location in 'dataset_dir'
 # 3 files have to be located there:
 # - balanced_train_segments_mp3.hdf
@@ -16,7 +16,8 @@ from EfficientAT.datasets.helpers.audiodatasets import PreprocessDataset, get_ro
 # follow the instructions here to get these 3 files:
 # https://github.com/kkoutini/PaSST/tree/main/audioset
 
-dataset_dir = "/net/vol/werning/db/audioset_hdf5"
+dataset_dir = db_root + "/audioset_32khz_mp3_hdf/mp3"
+
 assert dataset_dir is not None, "Specify AudioSet location in variable 'dataset_dir'. " \
                                 "Check out the Readme file for further instructions. " \
                                 "https://github.com/fschmid56/EfficientAT/blob/main/README.md"
@@ -214,33 +215,33 @@ def get_ft_cls_balanced_sample_weights(sample_weight_offset=100, sample_weight_s
     return all_weight
 
 
-def get_base_full_training_set(resample_rate=32000, gain_augment=0):
-    sets = [get_base_training_set(resample_rate=resample_rate, gain_augment=gain_augment),
-            get_unbalanced_training_set(resample_rate=resample_rate, gain_augment=gain_augment)]
+def get_base_full_training_set(resample_rate=32000, gain_augment=0, **kwargs):
+    sets = [get_base_training_set(resample_rate=resample_rate, gain_augment=gain_augment, **kwargs),
+            get_unbalanced_training_set(resample_rate=resample_rate, gain_augment=gain_augment, **kwargs)]
     ds = ConcatDataset(sets)
     return ds
 
 
-def get_base_training_set(resample_rate=32000, gain_augment=0):
+def get_base_training_set(resample_rate=32000, gain_augment=0, **kwargs):
     balanced_train_hdf5 = dataset_config['balanced_train_hdf5']
-    ds = AudioSetDataset(balanced_train_hdf5, resample_rate=resample_rate, gain_augment=gain_augment)
+    ds = AudioSetDataset(balanced_train_hdf5, resample_rate=resample_rate, gain_augment=gain_augment, **kwargs)
     return ds
 
 
-def get_unbalanced_training_set(resample_rate=32000, gain_augment=0):
+def get_unbalanced_training_set(resample_rate=32000, gain_augment=0, **kwargs):
     unbalanced_train_hdf5 = dataset_config['unbalanced_train_hdf5']
-    ds = AudioSetDataset(unbalanced_train_hdf5, resample_rate=resample_rate, gain_augment=gain_augment)
+    ds = AudioSetDataset(unbalanced_train_hdf5, resample_rate=resample_rate, gain_augment=gain_augment, **kwargs)
     return ds
 
 
-def get_base_test_set(resample_rate=32000):
+def get_base_test_set(resample_rate=32000, **kwargs):
     eval_hdf5 = dataset_config['eval_hdf5']
-    ds = AudioSetDataset(eval_hdf5, resample_rate=resample_rate)
+    ds = AudioSetDataset(eval_hdf5, resample_rate=resample_rate, **kwargs)
     return ds
 
 
-def get_training_set(add_index=True, roll=False, wavmix=False, gain_augment=0, resample_rate=32000):
-    ds = get_base_training_set(resample_rate=resample_rate, gain_augment=gain_augment)
+def get_training_set(add_index=True, roll=False, wavmix=False, gain_augment=0, resample_rate=32000, **kwargs):
+    ds = get_base_training_set(resample_rate=resample_rate, gain_augment=gain_augment, **kwargs)
     if roll:
         ds = PreprocessDataset(ds, get_roll_func())
     if wavmix:
@@ -250,8 +251,8 @@ def get_training_set(add_index=True, roll=False, wavmix=False, gain_augment=0, r
     return ds
 
 
-def get_full_training_set(add_index=True, roll=False, wavmix=False, gain_augment=0, resample_rate=32000):
-    ds = get_base_full_training_set(resample_rate=resample_rate, gain_augment=gain_augment)
+def get_full_training_set(add_index=True, roll=False, wavmix=False, gain_augment=0, resample_rate=32000, **kwargs):
+    ds = get_base_full_training_set(resample_rate=resample_rate, gain_augment=gain_augment, **kwargs)
     if roll:
         ds = PreprocessDataset(ds, get_roll_func())
     if wavmix:
@@ -261,6 +262,6 @@ def get_full_training_set(add_index=True, roll=False, wavmix=False, gain_augment
     return ds
 
 
-def get_test_set(resample_rate=32000):
-    ds = get_base_test_set(resample_rate=resample_rate)
+def get_test_set(resample_rate=32000, **kwargs):
+    ds = get_base_test_set(resample_rate=resample_rate, **kwargs)
     return ds
