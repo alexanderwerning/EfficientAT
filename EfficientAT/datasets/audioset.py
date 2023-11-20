@@ -1,10 +1,32 @@
 import io
-import av
 from torch.utils.data import Dataset as TorchDataset, ConcatDataset, WeightedRandomSampler
 import torch
 import numpy as np
 import h5py
 import os
+import soundfile as sf
+from functools import partial
+
+def read_mp3(stream, start=0, stop=None):
+    return sf.read(stream, format="mp3", dtype="float32", start=start, stop=stop)[0]
+if sf.__libsndfile_version__ != "1.2.0":
+    print("Warning: soundfile version is not 1.2.0. Using librosa instead of soundfile.")
+    import librosa
+    import tempfile
+    import warnings
+    def read_mp3(stream, start=0, stop=None):
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            with tempfile.NamedTemporaryFile(dir="/dev/shm", suffix=".mp3") as f:
+                f.write(stream.read())
+                f.flush()
+                sample_rate = 32000
+                duration = None
+                start_s = start / sample_rate
+                if stop is not None:
+                    duration = (stop-start) / sample_rate
+                return librosa.load(f.name, sr=sample_rate, mono=True, offset=start_s, duration=duration)[0]
+
 
 from EfficientAT.datasets.helpers.audiodatasets import PreprocessDataset, get_roll_func
 from nt_paths import db_root
@@ -35,16 +57,7 @@ def decode_mp3(mp3_arr):
     decodes an array if uint8 representing an mp3 file
     :rtype: np.array
     """
-    container = av.open(io.BytesIO(mp3_arr.tobytes()))
-    stream = next(s for s in container.streams if s.type == 'audio')
-    # print(stream)
-    a = []
-    for i, packet in enumerate(container.demux(stream)):
-        for frame in packet.decode():
-            a.append(frame.to_ndarray().reshape(-1))
-    waveform = np.concatenate(a)
-    if waveform.dtype != 'float32':
-        raise RuntimeError("Unexpected wave type")
+    waveform = read_mp3(io.BytesIO(mp3_arr.tobytes()))
     return waveform
 
 
@@ -152,7 +165,8 @@ class AudioSetDataset(TorchDataset):
         audio_name = self.dataset_file['audio_name'][index].decode()
         # convert our modified filenames to official file names
         audio_name = audio_name.replace(".mp3", "")  # .split("Y", 1)[1]  # we dont do that here
-        waveform = decode_mp3(self.dataset_file['mp3'][index])
+        audio = self.dataset_file['mp3'][index]
+        waveform = decode_mp3(audio)
         waveform = pydub_augment(waveform, self.gain_augment)
         waveform = pad_or_truncate(waveform, self.clip_length)
         waveform = self.resample(waveform)
@@ -181,7 +195,6 @@ class AudioSetDataset(TorchDataset):
 def get_ft_weighted_sampler(epoch_len=100000, sampler_replace=False):
     samples_weights = get_ft_cls_balanced_sample_weights()
     return WeightedRandomSampler(samples_weights, num_samples=epoch_len, replacement=sampler_replace)
-
 
 def get_ft_cls_balanced_sample_weights(sample_weight_offset=100, sample_weight_sum=True):
     """
