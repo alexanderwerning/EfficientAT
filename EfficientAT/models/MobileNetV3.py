@@ -244,6 +244,26 @@ class MobileNetV3(nn.Module):
     def forward(self, x: Tensor) -> Union[Tuple[Tensor, Tensor], Tuple[Tensor, List[Tensor]]]:
         return self._forward_impl(x)
 
+    def forward_return_emb(self, x: Tensor, classifier_split=5):
+        for i, layer in enumerate(self.features):
+            x = layer(x)
+
+        if not self.act_feats:
+            x = nn.Hardswish()(x)
+
+        if classifier_split > 0:
+            for i in range(classifier_split):
+                x = self.classifier[i](x)
+        embedding = x
+        len_clf = len(self.classifier)
+        if classifier_split < len_clf:
+            for i in range(classifier_split, len_clf):
+                x = self.classifier[i](x)
+        x = x.squeeze()
+        
+        return x, embedding
+
+
 
 def _mobilenet_v3_conf(
         width_mult: float = 1.0,
@@ -332,8 +352,14 @@ def _mobilenet_v3(
             print("Loading weights pre-trained weights in a non-strict manner.")
             model.load_state_dict(state_dict, strict=False)
     elif Path(pretrained_name).exists():
-        state_dict = model.load_state_dict(state_dict, strict=False)
-        model.load_state_dict(state_dict=state_dict)
+        import torch
+        state_dict = torch.load(pretrained_name)
+        try:
+            model.load_state_dict(state_dict=state_dict)
+        except RuntimeError as e:
+            print(str(e))
+            print("Loading weights pre-trained weights in a non-strict manner.")
+            state_dict = model.load_state_dict(state_dict, strict=False)
     elif pretrained_name:
         raise NotImplementedError(f"Model name '{pretrained_name}' unknown.")
     return model
