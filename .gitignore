@@ -3,6 +3,11 @@ __pycache__
 */resources/*.npy
 .idea
 */	
-*/wandb/run*/*
+*/wandb/*
 *.log
 .ipy*
+*.pt
+*.pth
+*.pkl
+*.ckpt
+*.egg-info/
