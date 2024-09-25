@@ -1,11 +1,11 @@
 import argparse
 import torch
 
-from helpers.flop_count import count_macs, count_macs_transformer
-from helpers.peak_memory import peak_memory_mnv3, peak_memory_cnn
-from models.MobileNetV3 import get_model
-from helpers.utils import NAME_TO_WIDTH
-from models.preprocess import AugmentMelSTFT
+from EfficientAT.helpers.flop_count import count_macs, count_macs_transformer
+from EfficientAT.helpers.peak_memory import peak_memory_mnv3, peak_memory_cnn
+from EfficientAT.models.MobileNetV3 import get_model
+from EfficientAT.helpers.utils import NAME_TO_WIDTH
+from EfficientAT.models.preprocess import AugmentMelSTFT
 
 
 def calc_complexity(args):
@@ -30,7 +30,7 @@ def calc_complexity(args):
     model.eval()
 
     # waveform
-    waveform = torch.zeros((1, args.resample_rate * 10))  # 10 seconds waveform
+    waveform = torch.zeros((1, args.resample_rate * 1))  # 10 seconds waveform
     spectrogram = mel(waveform)
     # squeeze in channel dimension
     spectrogram = spectrogram.unsqueeze(1)
@@ -39,7 +39,7 @@ def calc_complexity(args):
         total_macs = count_macs(model, spectrogram.size())
         total_params = sum(p.numel() for p in model.parameters())
         print("Model '{}' has {:.2f} million parameters and inference of a single 10-seconds audio clip requires "
-              "{:.2f} billion multiply-accumulate operations.".format(model_name, total_params/10**6, total_macs/10**9))
+              "{:.2f} million multiply-accumulate operations.".format(model_name, total_params/10**6, total_macs/10**6))
     elif args.complexity_type == "memory":
         if args.memory_efficient_inference:
             peak_mem = peak_memory_mnv3(model, spectrogram.size(), args.bits_per_elem)
