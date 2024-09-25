@@ -1,3 +1,6 @@
+## Fork
+Create a package and add additional configuration options to the MobileNetV3 class.
+
 # Efficient Large-Scale Audio Tagging
 
 In this repository, we publish pre-trained models and code described in the paper [Efficient Large-Scale Audio Tagging 
